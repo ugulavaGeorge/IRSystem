@@ -187,4 +187,14 @@ object DBManager {
     if (resultSet.next()) resultSet.getDouble(1)
     else -1
   }
+
+  /**
+    *
+    * @param terms - List of terms with TF value from query.
+    * @return - List of docIDs and value TFIDF computed for each term, doc pair
+    * which means that docID in List is not unique.
+    */
+  def getQueryRelatedDocs(terms : Map[String, Double]) : List[(Int,Double)] = {
+    List()
+  }
 }
