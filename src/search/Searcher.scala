@@ -32,16 +32,18 @@ class Searcher(query : String, pipeline: StanfordCoreNLP) extends Callable[Searc
     val qTF = qTerms.groupBy(identity).mapValues(_.size)
       .map(e => e._1 ->  e._2.toDouble/qTerms.size.toDouble).map{
       case e => e._1 -> (if (e._2 == 0) 0 else 1 + log10(e._2))
-    }
-
+    }.toList
+    qTF.foreach(e => println(e))
+    println("Query processed")
     val documents : List[(Int, Double)] = DBManager.getQueryRelatedDocs(qTF)
+    println("Obtained related docs from db")
     val top100 = documents.groupBy(_._1).map{
       case(key, pairs) =>
         val values = pairs.map(_._2)
         key -> values.sum
     }.toList.sortWith(_._2 > _._2).take(numberOfPagesToReturn).map(e => e._1)
       .map(e => DBManager.getDocInfo(e))
-
+    println("Results to output")
     SearchResult(top100)
   }
 }

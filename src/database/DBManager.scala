@@ -107,26 +107,44 @@ object DBManager {
     else null
   }
 
-  /**
-    * Get postings list for specified term
-    * @param term – term to get postings for
-    * @return list of postings (docIDs) for the term
-    */
-  def getPostings(term: String): List[Int] = {
+  def getDocInfo(docs: List[Int]): List[(String, String)] = {
+    if (docs.isEmpty) return null
     if (connection == null || connection.isClosed) connection = DriverManager.getConnection(connectionString)
 
-    val selectSql = "SELECT docID " +
-      "FROM Terms " +
-      s"WHERE term = '${term}'"
+    var selectSql = "SELECT url, header " +
+      s"FROM Documents WHERE docID = ${docs.head}"
+
+    docs.tail.foreach(e => selectSql += s" OR docID = ${e}")
+
     val statement = connection.createStatement()
     val resultSet = statement.executeQuery(selectSql)
 
-    var postings = List.empty[Int]
+    var info = List.empty[(String, String)]
 
-    while (resultSet.next()) postings = resultSet.getInt(1) :: postings
+    while (resultSet.next()) {
+      info = (resultSet.getString(1), resultSet.getString(2)) :: info
+    }
 
-    postings
+    info
   }
+
+
+//  def F(term: String, qTF : Double): List[(Int, Double)] = {
+//    if (connection == null || connection.isClosed) connection = DriverManager.getConnection(connectionString)
+//
+//    val selectSql = "SELECT docID " +
+//      "FROM Terms " +
+//      s"WHERE term = '${term}'"
+//    val statement = connection.createStatement()
+//    val resultSet = statement.executeQuery(selectSql)
+//
+//    var postings = List.empty[Int]
+//
+//    while (resultSet.next()) postings = resultSet.getInt(1) :: postings
+//    val termIDF = getIDF(term)
+//
+//    postings.map(e => e -> getTF(term, e))
+//  }
 
   /**
     * Get term frequency for specified term and document
@@ -136,7 +154,6 @@ object DBManager {
     */
   def getTF(term: String, docID: Int): Double = {
     if (connection == null || connection.isClosed) connection = DriverManager.getConnection(connectionString)
-
     val selectSql = "SELECT tf " +
       "FROM Terms " +
       s"WHERE term = '${term}' and docID = '${docID}'"
@@ -152,7 +169,7 @@ object DBManager {
     * @param term – term to get info for
     * @return list of tuples (term, docID, tf)
     */
-  def getTermInfo(term: String): List[(String, Int, Double)] = {
+  def getPostingsWithTFIDF(term: String, qtF : Double): List[(Int, Double)] = {
     if (connection == null || connection.isClosed) connection = DriverManager.getConnection(connectionString)
 
     val selectSql = "SELECT * " +
@@ -166,8 +183,8 @@ object DBManager {
     while (resultSet.next()) {
       tuples = (resultSet.getString(1), resultSet.getInt(2), resultSet.getDouble(3)) :: tuples
     }
-
-    tuples
+    val termIDF = getIDF(term)
+    tuples.map(e => e._2 -> e._3*termIDF*qtF)
   }
 
   /**
@@ -194,7 +211,13 @@ object DBManager {
     * @return - List of docIDs and value TFIDF computed for each term, doc pair
     * which means that docID in List is not unique.
     */
-  def getQueryRelatedDocs(terms : Map[String, Double]) : List[(Int,Double)] = {
-    List()
+  def getQueryRelatedDocs(terms : List[(String, Double)]) : List[(Int,Double)] = {
+
+    var relatedDocs :List[(Int,Double)] = List.empty[(Int,Double)]
+    terms.foreach( e => {
+      val positngs : List[(Int, Double)] = getPostingsWithTFIDF(e._1,e._2)
+      relatedDocs = relatedDocs:::positngs
+    })
+    relatedDocs
   }
 }
