@@ -1,0 +1,29 @@
+start
+sbt run
+run
+exit
+run
+sbt compile
+compile
+run
+compile
+exit
+run
+exit
+run
+compile
+run
+ clean
+run
+clean
+run
+clean
+run
+clean
+run
+status
+run
+clean
+run
+clean
+run
