@@ -1,2 +1,2 @@
 # IRSystem
-/awESRG.M,P
+by G. Ugulava and D. Kapitun 
