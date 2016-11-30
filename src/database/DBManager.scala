@@ -122,7 +122,7 @@ object DBManager {
     var info = List.empty[(String, String)]
 
     while (resultSet.next()) {
-      info = (resultSet.getString(1), resultSet.getString(2)) :: info
+      info = info ::: List((resultSet.getString(1), resultSet.getString(2)))
     }
 
     info

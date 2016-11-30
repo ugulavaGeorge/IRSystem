@@ -7,7 +7,7 @@ import edu.stanford.nlp.ling.CoreAnnotations.{LemmaAnnotation, SentencesAnnotati
 import edu.stanford.nlp.ling.CoreLabel
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import edu.stanford.nlp.util.CoreMap
-
+import scala.math._
 import scala.collection.JavaConversions._
 import database.DBManager
 
@@ -33,17 +33,35 @@ class Searcher(query : String, pipeline: StanfordCoreNLP) extends Callable[Searc
       .map(e => e._1 ->  e._2.toDouble/qTerms.size.toDouble).map{
       case e => e._1 -> (if (e._2 == 0) 0 else 1 + log10(e._2))
     }.toList
-    qTF.foreach(e => println(e))
     println("Query processed")
     val documents : List[(Int, Double)] = DBManager.getQueryRelatedDocs(qTF)
-    println("Obtained related docs from db")
+    println("Obtaining related docs from db")
     val top100 = documents.groupBy(_._1).map{
       case(key, pairs) =>
         val values = pairs.map(_._2)
         key -> values.sum
     }.toList.sortWith(_._2 > _._2).take(numberOfPagesToReturn).map(e => e._1)
       .map(e => DBManager.getDocInfo(e))
-    println("Results to output")
-    SearchResult(top100)
+    SearchResult(top100, averagePrecision(documents))
+  }
+
+  def averagePrecision(documents : List[(Int, Double)]) : Double = {
+    var scoreSum = 0.0
+    var min =  1000.0
+    documents.groupBy(_._1).map {
+      case (key, pairs) =>
+        val values = pairs.map(_._2)
+        key -> values.sum
+    }.toList.sortWith(_._2 > _._2).foreach(e => {
+      scoreSum+=e._2
+      if( e._2 < min)
+        min = e._2
+    })
+    val size = documents.groupBy(_._1).map {
+      case (key, pairs) =>
+        val values = pairs.map(_._2)
+        key -> values.sum
+    }.toList.size
+    abs((scoreSum/size) / min) * 100
   }
 }
